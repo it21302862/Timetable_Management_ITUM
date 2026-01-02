@@ -1,0 +1,49 @@
+/**
+ * Application Constants
+ * Centralized constants for the application
+ */
+
+export const USER_ROLES = {
+  ADMIN: 'ADMIN',
+  FACULTY: 'FACULTY',
+  STUDENT: 'STUDENT'
+};
+
+export const ROOM_TYPES = {
+  LECTURE_HALL: 'LECTURE_HALL',
+  LAB: 'LAB',
+  SEMINAR: 'SEMINAR',
+  STUDIO: 'STUDIO',
+  OFFICE: 'OFFICE'
+};
+
+export const SESSION_TYPES = {
+  LECTURE: 'LECTURE',
+  LAB: 'LAB',
+  TUTORIAL: 'TUTORIAL',
+  SEMINAR: 'SEMINAR',
+  EXAM: 'EXAM'
+};
+
+export const DAYS_OF_WEEK = {
+  MONDAY: 'MONDAY',
+  TUESDAY: 'TUESDAY',
+  WEDNESDAY: 'WEDNESDAY',
+  THURSDAY: 'THURSDAY',
+  FRIDAY: 'FRIDAY',
+  SATURDAY: 'SATURDAY',
+  SUNDAY: 'SUNDAY'
+};
+
+export const HTTP_STATUS = {
+  OK: 200,
+  CREATED: 201,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  CONFLICT: 409,
+  INTERNAL_SERVER_ERROR: 500,
+  SERVICE_UNAVAILABLE: 503
+};
+
