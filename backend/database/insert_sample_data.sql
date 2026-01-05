@@ -187,3 +187,4 @@ INSERT INTO timetable_slots (module_id, instructor_id, room_id, day, start_time,
 -- JOIN rooms r ON t.room_id = r.id
 -- ORDER BY FIELD(t.day, 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'), t.start_time;
 
+

@@ -1,5 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
+import cors from 'cors';
 import timetableRoutes from './routes/timetable.route.js';
 import moduleRoutes from './routes/module.route.js';
 import roomRoutes from './routes/room.route.js';
@@ -11,6 +12,12 @@ import { logger } from './middleware/logger.js';
 dotenv.config();
 
 const app = express();
+
+app.use(cors({
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
 
 // Middleware
 app.use(express.json());

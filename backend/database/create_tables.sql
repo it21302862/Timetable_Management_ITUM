@@ -81,6 +81,27 @@ CREATE TABLE IF NOT EXISTS timetable_slots (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
+-- 5. TIMETABLE_COMMENTS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS timetable_comments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    timetable_slot_id INT NOT NULL,
+    author_id INT NOT NULL,
+    parent_comment_id INT NULL,
+    message TEXT NOT NULL,
+    status ENUM('OPEN', 'RESOLVED', 'CANCELLED') NOT NULL DEFAULT 'OPEN',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (timetable_slot_id) REFERENCES timetable_slots(id) ON DELETE CASCADE,
+    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_comment_id) REFERENCES timetable_comments(id) ON DELETE CASCADE,
+    INDEX idx_timetable_slot (timetable_slot_id),
+    INDEX idx_author (author_id),
+    INDEX idx_parent_comment (parent_comment_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
 -- Table Creation Complete
 -- ============================================
 -- Tables created:
@@ -88,5 +109,7 @@ CREATE TABLE IF NOT EXISTS timetable_slots (
 -- 2. modules - Academic modules/courses
 -- 3. rooms - Available rooms for classes
 -- 4. timetable_slots - Timetable entries/schedules
+-- 5. timetable_comments - Comment threads on timetable slots
 -- ============================================
+
 
