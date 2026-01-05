@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import timetableRoutes from './routes/timetable.route.js';
+import timetableCommentRoutes from './routes/timetableComment.route.js';
 import moduleRoutes from './routes/module.route.js';
 import roomRoutes from './routes/room.route.js';
 import userRoutes from './routes/user.route.js';
@@ -35,6 +36,7 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/timetable', timetableRoutes);
+app.use('/api/timetable-comments', timetableCommentRoutes);
 app.use('/api/modules', moduleRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/users', userRoutes);

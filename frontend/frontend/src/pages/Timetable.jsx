@@ -38,6 +38,16 @@ export default function Timetable() {
   const [newSlotRoomId, setNewSlotRoomId] = useState('');
   const [newSlotSessionType, setNewSlotSessionType] = useState('LECTURE');
 
+  // Comment state
+  const [users, setUsers] = useState([]);
+  const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
+  const [commentSlot, setCommentSlot] = useState(null); // timetableSlot object
+  const [comments, setComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [newCommentText, setNewCommentText] = useState('');
+  const [commentAuthorId, setCommentAuthorId] = useState('');
+  const [replyToCommentId, setReplyToCommentId] = useState(null);
+
   // Get current week dates
   const getWeekDates = (dateString) => {
     if (!dateString) {
@@ -114,6 +124,7 @@ export default function Timetable() {
     fetchModules();
     fetchInstructors();
     fetchRooms();
+    fetchUsers();
   }, []);
 
   const fetchTimetable = async () => {
@@ -151,6 +162,17 @@ export default function Timetable() {
       }
     } catch (err) {
       console.error('Error fetching instructors:', err);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get('/users');
+      if (response.data.success) {
+        setUsers(response.data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching users:', err);
     }
   };
 
@@ -293,6 +315,85 @@ export default function Timetable() {
       setSaving(false);
     }
   };
+
+  const openCommentsModal = async (timetableSlot) => {
+    setCommentSlot(timetableSlot);
+    setIsCommentModalOpen(true);
+    setNewCommentText('');
+    setReplyToCommentId(null);
+
+    // pre-select an author if not set
+    if (!commentAuthorId && users.length > 0) {
+      const nonStudent = users.find((u) => u.role !== 'STUDENT') || users[0];
+      setCommentAuthorId(nonStudent.id);
+    }
+
+    try {
+      setCommentsLoading(true);
+      const res = await api.get(`/timetable-comments/slot/${timetableSlot.id}`);
+      if (res.data.success) {
+        setComments(res.data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching comments:', err);
+      alert(err.response?.data?.message || 'Failed to load comments');
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const closeCommentsModal = () => {
+    setIsCommentModalOpen(false);
+    setCommentSlot(null);
+    setComments([]);
+    setNewCommentText('');
+    setReplyToCommentId(null);
+  };
+
+  const handleAddComment = async (e) => {
+    e.preventDefault();
+    if (!commentSlot || !commentAuthorId || !newCommentText.trim()) return;
+
+    try {
+      setSaving(true);
+      await api.post('/timetable-comments', {
+        timetable_slot_id: commentSlot.id,
+        author_id: Number(commentAuthorId),
+        message: newCommentText.trim(),
+        parent_comment_id: replyToCommentId
+      });
+
+      setNewCommentText('');
+      setReplyToCommentId(null);
+
+      const res = await api.get(`/timetable-comments/slot/${commentSlot.id}`);
+      if (res.data.success) {
+        setComments(res.data.data || []);
+      }
+    } catch (err) {
+      console.error('Error adding comment:', err);
+      alert(err.response?.data?.message || 'Failed to add comment');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReplyClick = (commentId) => {
+    setReplyToCommentId(commentId);
+  };
+
+  const groupedComments = comments.reduce(
+    (acc, c) => {
+      if (c.parent_comment_id) {
+        acc.children[c.parent_comment_id] = acc.children[c.parent_comment_id] || [];
+        acc.children[c.parent_comment_id].push(c);
+      } else {
+        acc.roots.push(c);
+      }
+      return acc;
+    },
+    { roots: [], children: {} }
+  );
 
   // Format session type for display
   const formatSessionType = (type) => {
@@ -498,6 +599,16 @@ export default function Timetable() {
                                       {timetableSlot.instructor_name}
                                     </div>
                                   )}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openCommentsModal(timetableSlot);
+                                    }}
+                                    className="mt-2 inline-flex items-center text-[10px] text-blue-700 hover:text-blue-900"
+                                  >
+                                    💬 <span className="ml-1">Comments</span>
+                                  </button>
                                 </div>
                               ))}
                             </div>
@@ -672,6 +783,158 @@ export default function Timetable() {
                   }
                 >
                   {saving ? 'Saving...' : 'Save Slot'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Comments Modal */}
+      {isCommentModalOpen && commentSlot && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl mx-4 max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <div>
+                <h2 className="text-lg font-semibold">Comments for {commentSlot.module_code}</h2>
+                <p className="text-xs text-gray-500">
+                  {formatSessionType(commentSlot.session_type)} • {commentSlot.day} •{' '}
+                  {commentSlot.start_time?.slice(0, 5)} - {commentSlot.end_time?.slice(0, 5)} •{' '}
+                  Room {commentSlot.room_name}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeCommentsModal}
+                className="text-gray-500 hover:text-gray-800 text-xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+              {commentsLoading ? (
+                <div className="text-sm text-gray-500">Loading comments...</div>
+              ) : groupedComments.roots.length === 0 ? (
+                <div className="text-sm text-gray-500">No comments yet. Be the first to comment.</div>
+              ) : (
+                groupedComments.roots.map((c) => (
+                  <div key={c.id} className="border border-gray-200 rounded-md p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-semibold">
+                        {c.author_name}{' '}
+                        <span className="ml-2 text-[11px] uppercase text-gray-500">
+                          {c.status}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-gray-500">
+                        {new Date(c.created_at).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="mt-1 text-sm text-gray-800 whitespace-pre-wrap">
+                      {c.message}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleReplyClick(c.id)}
+                      className="mt-2 text-[11px] text-blue-700 hover:text-blue-900"
+                    >
+                      Reply
+                    </button>
+
+                    {groupedComments.children[c.id] &&
+                      groupedComments.children[c.id].map((child) => (
+                        <div
+                          key={child.id}
+                          className="mt-3 ml-4 border-l-2 border-gray-200 pl-3 text-sm"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="font-semibold">
+                              {child.author_name}{' '}
+                              <span className="ml-2 text-[11px] uppercase text-gray-500">
+                                {child.status}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-gray-500">
+                              {new Date(child.created_at).toLocaleString()}
+                            </div>
+                          </div>
+                          <div className="mt-1 text-gray-800 whitespace-pre-wrap">
+                            {child.message}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                ))
+              )}
+            </div>
+
+            <form onSubmit={handleAddComment} className="border-t px-6 py-4 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Author
+                  </label>
+                  <select
+                    required
+                    value={commentAuthorId}
+                    onChange={(e) => setCommentAuthorId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select user</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.role})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Replying To
+                  </label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={
+                      replyToCommentId
+                        ? `Comment #${replyToCommentId}`
+                        : 'New top-level comment'
+                    }
+                    className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-xs text-gray-600"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Comment
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={newCommentText}
+                  onChange={(e) => setNewCommentText(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Describe the reason for requesting this slot or add a reply..."
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={closeCommentsModal}
+                  className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100 text-sm"
+                  disabled={saving}
+                >
+                  Close
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 text-sm disabled:opacity-60"
+                  disabled={saving || !commentAuthorId || !newCommentText.trim()}
+                >
+                  {saving ? 'Posting...' : 'Post Comment'}
                 </button>
               </div>
             </form>
